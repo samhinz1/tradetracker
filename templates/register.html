@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #1f2932;
+            color: #2effab;
+        }
+        .form-container {
+            max-width: 500px;
+            margin: 50px auto;
+            background-color: #263238;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #2effab;
+        }
+        .form-container h2 {
+            color: #a0c1f3;
+        }
+        .form-container .form-group label {
+            color: #ced7e0;
+        }
+        .form-container .btn-primary {
+            background-color: #2effab;
+            border-color: #2effab;
+            color: #1f2932;
+        }
+        .alert {
+            background-color: #263238;
+            border-color: #2effab;
+            color: #ff4646;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h2 class="text-center">Register</h2>
+            <form method="POST" action="{{ url_for('register') }}">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.username.label(class="form-control-label") }}
+                    {{ form.username(class="form-control", placeholder="Enter username") }}
+                    {% for error in form.username.errors %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.email.label(class="form-control-label") }}
+                    {{ form.email(class="form-control", placeholder="Enter email") }}
+                    {% for error in form.email.errors %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.password.label(class="form-control-label") }}
+                    {{ form.password(class="form-control", placeholder="Enter password") }}
+                    {% for error in form.password.errors %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.confirm_password.label(class="form-control-label") }}
+                    {{ form.confirm_password(class="form-control", placeholder="Confirm password") }}
+                    {% for error in form.confirm_password.errors %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Register</button>
+            </form>
+            <p class="text-center mt-3"><a href="{{ url_for('login') }}" style="color: #a0c1f3;">Already have an account? Login</a></p>
+        </div>
+    </div>
+</body>
+</html>

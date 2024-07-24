@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Journal</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js'></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            background-color: #1f2932;
+            color: #2effab;
+        }
+        .stat-card {
+            margin: 10px;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+        }
+        .stat-card .card-title, .stat-card .card-text {
+            color: #ced7e0;
+        }
+        h1, h2 {
+            color: #a0c1f3;
+        }
+        .trade-log-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .trade-log {
+            background-color: #1f2932;
+            color: #ced7e0;
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+        }
+        .trade-log table {
+            color: #ced7e0;
+            width: 100%;
+        }
+        .trade-log th, .trade-log td {
+            border: 1px solid #2effab;
+            padding: 8px;
+        }
+        .trade-log th {
+            background-color: #1f2932;
+            cursor: pointer;
+        }
+        .trade-log tr:nth-child(even) {
+            background-color: #263238;
+        }
+        .btn-custom {
+            color: #ced7e0;
+            background-color: #263238;
+            border: 1px solid #2effab;
+        }
+        .btn-custom.active {
+            background-color: #2effab;
+            color: #1f2932;
+            border-color: #2effab;
+        }
+        .trade-log select,
+        .trade-log input[type="text"] {
+            width: 150px;  /* Increase the width for better visibility */
+        }
+        #calendar {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 10px;
+            background-color: #1f2932;
+            color: #ced7e0;
+        }
+        .fc .fc-col-header-cell-cushion {
+            color: #ced7e0;
+        }
+        .fc .fc-daygrid-day {
+            background-color: #1f2932;
+            border: 1px solid #ced7e0;
+        }
+        .fc .fc-daygrid-day:hover {
+            background-color: #263238;
+        }
+        .fc .fc-daygrid-event {
+            background-color: #263238;
+            color: #ced7e0;
+            border: 1px solid #ced7e0;
+        }
+        .fc .fc-daygrid-event-dot {
+            border-color: #ced7e0;
+        }
+        .fc .fc-day-today {
+            background-color: #263238;
+        }
+        .fc .fc-daygrid-day-number {
+            color: #ced7e0;
+        }
+        .fc-event-positive .fc-event-main, .fc-event-negative .fc-event-main {
+            color: #1f2932 !important; /* Ensure the text color is dark for readability */
+        }
+        .fc-event-positive {
+            background-color: rgb(46, 255, 171) !important;
+            border-color: rgb(46, 255, 171) !important;
+        }
+        .fc-event-negative {
+            background-color: rgb(255, 46, 46) !important;
+            border-color: rgb(255, 46, 46) !important;
+        }
+        .fc .fc-event .fc-event-title {
+            color: #1f2932 !important; /* Ensure the text color is dark for readability */
+        }
+        .fc-total-column {
+            color: #ced7e0 !important;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <h1 class="text-center my-4">Trade Journal</h1>
+
+        <!-- Upload Form -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2>Upload your IG CSV</h2>
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="form-inline">
+                    <div class="form-group mr-2">
+                        <input type="file" name="file" class="form-control-file">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload CSV</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h2>Filter Trades by Time</h2>
+                <div class="btn-group" role="group" aria-label="Filter buttons">
+                    <a href="{{ url_for('journal', filter='all') }}" class="btn btn-secondary {% if filter_type == 'all' %}active{% endif %}">All</a>
+                    <a href="{{ url_for('journal', filter='prior_week') }}" class="btn btn-secondary {% if filter_type == 'prior_week' %}active{% endif %}">Prior Week</a>
+                    <a href="{{ url_for('journal', filter='prior_7_days') }}" class="btn btn-secondary {% if filter_type == 'prior_7_days' %}active{% endif %}">Prior 7 Days</a>
+                    <a href="{{ url_for('journal', filter='prior_month') }}" class="btn btn-secondary {% if filter_type == 'prior_month' %}active{% endif %}">Prior Month</a>
+                    <a href="{{ url_for('journal', filter='year_to_date') }}" class="btn btn-secondary {% if filter_type == 'year_to_date' %}active{% endif %}">Year to Date</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter by Setup Buttons -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h2>Filter Trades by Setup</h2>
+                <div class="btn-group" role="group" aria-label="Setup filter buttons">
+                    <a href="{{ url_for('journal', filter='breakout_with_pivot') }}" class="btn btn-secondary {% if filter_type == 'breakout_with_pivot' %}active{% endif %}">Breakout with Pivot</a>
+                    <a href="{{ url_for('journal', filter='dtp') }}" class="btn btn-secondary {% if filter_type == 'dtp' %}active{% endif %}">DTP</a>
+                    <a href="{{ url_for('journal', filter='pullback_buy') }}" class="btn btn-secondary {% if filter_type == 'pullback_buy' %}active{% endif %}">Pullback Buy</a>
+                    <a href="{{ url_for('journal', filter='pullback_buy_to_base') }}" class="btn btn-secondary {% if filter_type == 'pullback_buy_to_base' %}active{% endif %}">Pullback Buy to Base</a>
+                    <a href="{{ url_for('journal', filter='powerbase') }}" class="btn btn-secondary {% if filter_type == 'powerbase' %}active{% endif %}">Powerbase</a>
+                    <a href="{{ url_for('journal', filter='century_play') }}" class="btn btn-secondary {% if filter_type == 'century_play' %}active{% endif %}">Century Play</a>
+                    <a href="{{ url_for('journal', filter='other') }}" class="btn btn-secondary {% if filter_type == 'other' %}active{% endif %}">Other</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Trades Message -->
+        {% if message %}
+        <div class="row">
+            <div class="col-12">
+                <p class="text-center">{{ message }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Overview -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h2>Overview</h2>
+            </div>
+            {% for key, value in overview.items() %}
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card stat-card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ key }}</h5>
+                        <p class="card-text">{{ value }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Trade Statistics -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h2>Trade Statistics</h2>
+            </div>
+            {% for key, value in trade_stats.items() %}
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card stat-card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ key }}</h5>
+                        <p class="card-text">{{ value }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Equity Curve -->
+        {% if not message and filter_type not in ['breakout_with_pivot', 'dtp', 'pullback_buy', 'pullback_buy_to_base', 'powerbase', 'century_play', 'other'] %}
+        <div class="row">
+            <div class="col-12">
+                <h2>Equity Curve</h2>
+                <div>{{ equity_curve|safe }}</div>
+            </div>
+        </div>
+
+        <!-- Daily P/L Bar Chart -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h2>Daily P/L</h2>
+                <div>{{ daily_pl|safe }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Calendar -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h2>Calendar</h2>
+                <div id="calendar"></div>
+            </div>
+        </div>
+
+        <!-- Trade Log -->
+        <div class="trade-log-container">
+            <div class="trade-log">
+                <h2 class="text-center">Trade Log</h2>
+                <button id="toggleButton" class="btn btn-custom mb-3" type="button" data-toggle="collapse" data-target="#tradeLogCollapse" aria-expanded="false" aria-controls="tradeLogCollapse">
+                    Show Trade Log
+                </button>
+                <div class="collapse" id="tradeLogCollapse">
+                    <form action="{{ url_for('save_trade_log') }}" method="post">
+                        <table class="table table-striped table-bordered">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable(0)">Opened</th>
+                                    <th onclick="sortTable(1)">Market</th>
+                                    <th onclick="sortTable(2)">Direction</th>
+                                    <th onclick="sortTable(3)">Size</th>
+                                    <th onclick="sortTable(4)">Opening</th>
+                                    <th onclick="sortTable(5)">Closing</th>
+                                    <th onclick="sortTable(6)">P/L</th>
+                                    <th onclick="sortTable(7)">Total</th>
+                                    <th onclick="sortTable(8)">Commissions</th>
+                                    <th onclick="sortTable(9)">P/L %</th>
+                                    <th>Setup Type</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trade in trade_log %}
+                                <tr>
+                                    <td>{{ trade.Opened }}</td>
+                                    <td>{{ trade.Market }}</td>
+                                    <td>{{ trade.Direction }}</td>
+                                    <td>{{ trade.Size }}</td>
+                                    <td>{{ trade.Opening }}</td>
+                                    <td>{{ trade.Closing }}</td>
+                                    <td>{{ '%.1f' % trade['P/L'] }}</td>
+                                    <td>{{ trade.Total }}</td>
+                                    <td>{{ '%.1f' % trade.Commissions }}</td>
+                                    <td>{{ '%.2f' % trade['P/L %'] }}</td>
+                                    <td>
+                                        <select name="setup_type_{{ loop.index }}" class="form-control">
+                                            <option value="No setup selected" {% if trade.setup_type == "" %}selected{% endif %}>No setup selected</option>
+                                            <option value="Breakout with Pivot" {% if trade.setup_type == "Breakout with Pivot" %}selected{% endif %}>Breakout with Pivot</option>
+                                            <option value="DTP" {% if trade.setup_type == "DTP" %}selected{% endif %}>DTP</option>
+                                            <option value="Pullback Buy" {% if trade.setup_type == "Pullback Buy" %}selected{% endif %}>Pullback Buy</option>
+                                            <option value="Pullback Buy to base" {% if trade.setup_type == "Pullback Buy to base" %}selected{% endif %}>Pullback Buy to base</option>
+                                            <option value="Powerbase" {% if trade.setup_type == "Powerbase" %}selected{% endif %}>Powerbase</option>
+                                            <option value="Century Play" {% if trade.setup_type == "Century Play" %}selected{% endif %}>Century Play</option>
+                                            <option value="Other" {% if trade.setup_type == "Other" %}selected{% endif %}>Other</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="note_{{ loop.index }}" class="form-control" maxlength="100" value="{{ trade.note }}">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <button type="submit" class="btn btn-primary">Save Trade Log</button>
+                    </form>
+                    <form action="{{ url_for('merge_file') }}" method="post" enctype="multipart/form-data" class="form-inline mt-3">
+                        <div class="form-group mr-2">
+                            <input type="file" name="file" class="form-control-file">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Upload New Data</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        $('#tradeLogCollapse').on('shown.bs.collapse', function () {
+            $('#toggleButton').text('Minimize Trade Log');
+        });
+        $('#tradeLogCollapse').on('hidden.bs.collapse', function () {
+            $('#toggleButton').text('Show Trade Log');
+        });
+
+        function sortTable(columnIndex) {
+            var table = document.querySelector(".trade-log table");
+            var rows = Array.from(table.querySelectorAll("tbody > tr"));
+            var ascending = table.getAttribute("data-sort-ascending") === "true";
+
+            rows.sort((rowA, rowB) => {
+                var cellA = rowA.cells[columnIndex].innerText;
+                var cellB = rowB.cells[columnIndex].innerText;
+
+                if (!isNaN(cellA) && !isNaN(cellB)) {
+                    cellA = parseFloat(cellA);
+                    cellB = parseFloat(cellB);
+                }
+
+                if (cellA < cellB) {
+                    return ascending ? -1 : 1;
+                }
+                if (cellA > cellB) {
+                    return ascending ? 1 : -1;
+                }
+                return 0;
+            });
+
+            rows.forEach(row => table.querySelector("tbody").appendChild(row));
+            table.setAttribute("data-sort-ascending", !ascending);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                events: {
+                    url: '/calendar_data',
+                    failure: function() {
+                        document.getElementById('calendar').innerHTML = '<div class="alert alert-danger">There was an error while fetching events!</div>';
+                    }
+                },
+                dayHeaderContent: function(arg) {
+                    if (arg.dow === 6) {
+                        return { html: 'Total' }; // Replace "Sat" with "Total"
+                    } else {
+                        return { html: arg.date.toLocaleString('default', { weekday: 'short' }) };
+                    }
+                },
+                eventDidMount: function(info) {
+                    var eventElement = info.el;
+                    var eventValue = parseFloat(info.event.title.replace(/[^\d.-]/g, '')); // Extract the numeric value
+
+                    if (eventValue >= 0) {
+                        eventElement.classList.add('fc-event-positive');
+                    } else {
+                        eventElement.classList.add('fc-event-negative');
+                    }
+
+                    if (info.event.extendedProps.description) {
+                        $(info.el).tooltip({
+                            title: info.event.extendedProps.description,
+                            placement: 'top',
+                            trigger: 'hover',
+                            container: 'body'
+                        });
+                    }
+
+                    if (info.event.title.startsWith("Total:")) {
+                        eventElement.classList.add('fc-total-column');
+                    }
+                }
+            });
+            calendar.render();
+        });
+    </script>
+</body>
+</html>

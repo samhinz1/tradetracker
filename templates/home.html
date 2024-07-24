@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Journal Home</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #1f2932;
+            color: #2effab;
+        }
+        h1, h2 {
+            color: #a0c1f3;
+        }
+        .btn-custom {
+            color: #ced7e0;
+            background-color: #263238;
+            border: 1px solid #2effab;
+            margin: 10px;
+        }
+        .btn-custom:hover {
+            background-color: #2effab;
+            color: #1f2932;
+        }
+        .logo {
+            max-width: 200px;
+            margin: 20px auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container text-center">
+        <img src="{{ url_for('static', filename='images/SuubeePremiumlogo.png') }}" alt="Logo" class="logo">
+        <h1 class="my-4">Welcome to the IG x Suubee Trade Journal</h1>
+        <p class="lead">Log and analyze your trades easily and efficiently.</p>
+        <div class="mt-5">
+            <a href="{{ url_for('login') }}" class="btn btn-custom btn-lg">Login</a>
+            <a href="{{ url_for('register') }}" class="btn btn-custom btn-lg">Register</a>
+        </div>
+    </div>
+</body>
+</html>

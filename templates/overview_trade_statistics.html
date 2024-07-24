@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overview & Trade Statistics</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #1f2932;
+            color: #2effab;
+        }
+        .stat-card {
+            margin: 10px;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+        }
+        .stat-card .card-title, .stat-card .card-text {
+            color: #ced7e0;
+        }
+        h1, h2 {
+            color: #a0c1f3;
+        }
+        .btn-custom {
+            color: #ced7e0;
+            background-color: #263238;
+            border: 1px solid #2effab;
+        }
+        .btn-custom.active {
+            background-color: #2effab;
+            color: #1f2932;
+            border-color: #2effab;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <h1 class="text-center my-4">Overview & Trade Statistics</h1>
+
+        <!-- Filter Buttons -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h2>Filter Trades by Time</h2>
+                <div class="btn-group" role="group" aria-label="Filter buttons">
+                    <a href="{{ url_for('overview_trade_statistics', filter='all') }}" class="btn btn-secondary {% if filter_type == 'all' %}active{% endif %}">All</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='prior_week') }}" class="btn btn-secondary {% if filter_type == 'prior_week' %}active{% endif %}">Prior Week</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='prior_7_days') }}" class="btn btn-secondary {% if filter_type == 'prior_7_days' %}active{% endif %}">Prior 7 Days</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='prior_month') }}" class="btn btn-secondary {% if filter_type == 'prior_month' %}active{% endif %}">Prior Month</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='year_to_date') }}" class="btn btn-secondary {% if filter_type == 'year_to_date' %}active{% endif %}">Year to Date</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter by Setup Buttons -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h2>Filter Trades by Setup</h2>
+                <div class="btn-group" role="group" aria-label="Setup filter buttons">
+                    <a href="{{ url_for('overview_trade_statistics', filter='breakout_with_pivot') }}" class="btn btn-secondary {% if filter_type == 'breakout_with_pivot' %}active{% endif %}">Breakout with Pivot</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='dtp') }}" class="btn btn-secondary {% if filter_type == 'dtp' %}active{% endif %}">DTP</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='pullback_buy') }}" class="btn btn-secondary {% if filter_type == 'pullback_buy' %}active{% endif %}">Pullback Buy</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='pullback_buy_to_base') }}" class="btn btn-secondary {% if filter_type == 'pullback_buy_to_base' %}active{% endif %}">Pullback Buy to Base</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='powerbase') }}" class="btn btn-secondary {% if filter_type == 'powerbase' %}active{% endif %}">Powerbase</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='century_play') }}" class="btn btn-secondary {% if filter_type == 'century_play' %}active{% endif %}">Century Play</a>
+                    <a href="{{ url_for('overview_trade_statistics', filter='other') }}" class="btn btn-secondary {% if filter_type == 'other' %}active{% endif %}">Other</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Trades Message -->
+        {% if message %}
+        <div class="row">
+            <div class="col-12">
+                <p class="text-center">{{ message }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Overview -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h2>Overview</h2>
+            </div>
+            {% for key, value in overview.items() %}
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card stat-card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ key }}</h5>
+                        <p class="card-text">{{ value }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Trade Statistics -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h2>Trade Statistics</h2>
+            </div>
+            {% for key, value in trade_stats.items() %}
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card stat-card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ key }}</h5>
+                        <p class="card-text">{{ value }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Log</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #1f2932;
+            color: #2effab;
+        }
+        .trade-log-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .trade-log {
+            background-color: #1f2932;
+            color: #ced7e0;
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+        }
+        .trade-log table {
+            color: #ced7e0;
+            width: 100%;
+        }
+        .trade-log th, .trade-log td {
+            border: 1px solid #2effab;
+            padding: 8px;
+        }
+        .trade-log th {
+            background-color: #1f2932;
+            cursor: pointer;
+        }
+        .trade-log tr:nth-child(even) {
+            background-color: #263238;
+        }
+        .btn-custom {
+            color: #ced7e0;
+            background-color: #263238;
+            border: 1px solid #2effab;
+        }
+        .btn-custom.active {
+            background-color: #2effab;
+            color: #1f2932;
+            border-color: #2effab;
+        }
+        .trade-log select,
+        .trade-log input[type="text"] {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <div class="trade-log-container">
+            <div class="trade-log">
+                <h2 class="text-center my-4">Trade Log</h2>
+                <form action="{{ url_for('save_trade_log') }}" method="post">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)">Opened</th>
+                                <th onclick="sortTable(1)">Market</th>
+                                <th onclick="sortTable(2)">Direction</th>
+                                <th onclick="sortTable(3)">Size</th>
+                                <th onclick="sortTable(4)">Opening</th>
+                                <th onclick="sortTable(5)">Closing</th>
+                                <th onclick="sortTable(6)">P/L</th>
+                                <th onclick="sortTable(7)">Total</th>
+                                <th onclick="sortTable(8)">Commissions</th>
+                                <th onclick="sortTable(9)">P/L %</th>
+                                <th>Setup Type</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trade in trade_log %}
+                            <tr>
+                                <td>{{ trade.Opened }}</td>
+                                <td>{{ trade.Market }}</td>
+                                <td>{{ trade.Direction }}</td>
+                                <td>{{ trade.Size }}</td>
+                                <td>{{ trade.Opening }}</td>
+                                <td>{{ trade.Closing }}</td>
+                                <td>{{ '%.1f' % trade['P/L'] }}</td>
+                                <td>{{ trade.Total }}</td>
+                                <td>{{ '%.1f' % trade.Commissions }}</td>
+                                <td>{{ '%.2f' % trade['P/L %'] }}</td>
+                                <td>
+                                    <select name="setup_type_{{ loop.index }}" class="form-control">
+                                        <option value="No setup selected" {% if trade.setup_type == "" %}selected{% endif %}>No setup selected</option>
+                                        <option value="Breakout with Pivot" {% if trade.setup_type == "Breakout with Pivot" %}selected{% endif %}>Breakout with Pivot</option>
+                                        <option value="DTP" {% if trade.setup_type == "DTP" %}selected{% endif %}>DTP</option>
+                                        <option value="Pullback Buy" {% if trade.setup_type == "Pullback Buy" %}selected{% endif %}>Pullback Buy</option>
+                                        <option value="Pullback Buy to base" {% if trade.setup_type == "Pullback Buy to base" %}selected{% endif %}>Pullback Buy to base</option>
+                                        <option value="Powerbase" {% if trade.setup_type == "Powerbase" %}selected{% endif %}>Powerbase</option>
+                                        <option value="Century Play" {% if trade.setup_type == "Century Play" %}selected{% endif %}>Century Play</option>
+                                        <option value="Other" {% if trade.setup_type == "Other" %}selected{% endif %}>Other</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" name="note_{{ loop.index }}" class="form-control" maxlength="100" value="{{ trade.note }}">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <button type="submit" class="btn btn-primary">Save Trade Log</button>
+                </form>
+                <form action="{{ url_for('merge_file') }}" method="post" enctype="multipart/form-data" class="form-inline mt-3">
+                    <div class="form-group mr-2">
+                        <input type="file" name="file" class="form-control-file">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload New Data</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function sortTable(columnIndex) {
+            var table = document.querySelector(".trade-log table");
+            var rows = Array.from(table.querySelectorAll("tbody > tr"));
+            var ascending = table.getAttribute("data-sort-ascending") === "true";
+
+            rows.sort((rowA, rowB) => {
+                var cellA = rowA.cells[columnIndex].innerText;
+                var cellB = rowB.cells[columnIndex].innerText;
+
+                if (!isNaN(cellA) && !isNaN(cellB)) {
+                    cellA = parseFloat(cellA);
+                    cellB = parseFloat(cellB);
+                }
+
+                if (cellA < cellB) {
+                    return ascending ? -1 : 1;
+                }
+                if (cellA > cellB) {
+                    return ascending ? 1 : -1;
+                }
+                return 0;
+            });
+
+            rows.forEach(row => table.querySelector("tbody").appendChild(row));
+            table.setAttribute("data-sort-ascending", !ascending);
+        }
+    </script>
+</body>
+</html>
