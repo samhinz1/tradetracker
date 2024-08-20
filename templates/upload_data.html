@@ -13,6 +13,11 @@
         h1, h2 {
             color: #a0c1f3;
         }
+
+        h3 {
+            font-size: 15px;
+        }
+
         .btn-custom {
             color: #ced7e0;
             background-color: #263238;
@@ -33,7 +38,8 @@
         <!-- Upload Form -->
         <div class="row mb-4">
             <div class="col-12">
-                <h2>Upload your IG CSV</h2>
+                <h2>Upload your IG CSV (Use this for first time upload) </h2>
+                <h3>Upload your CSV file which can be accessed from IG under History > View Full History > Profit/Loss breakdown > Select "Closed" > Select timeframe > Show history > Download CSV </h3>
                 <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="form-inline">
                     <div class="form-group mr-2">
                         <input type="file" name="file" class="form-control-file">
@@ -46,7 +52,7 @@
         <!-- Upload New Data Form -->
         <div class="row mb-4">
             <div class="col-12">
-                <h2>Upload New Data</h2>
+                <h2>Upload New Data (Use this to merge/add to existing data) </h2>
                 <form action="{{ url_for('merge_file') }}" method="post" enctype="multipart/form-data" class="form-inline">
                     <div class="form-group mr-2">
                         <input type="file" name="file" class="form-control-file">

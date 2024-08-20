@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Trades</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <style>
+        body {
+            background-color: #1f2932;
+            color: #2effab;
+        }
+
+        .stat-card {
+            margin: 10px;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+        }
+
+        .stat-card .card-title, .stat-card .card-text {
+            color: #ced7e0;
+        }
+
+        h1, h2 {
+            color: #a0c1f3;
+        }
+
+        .btn-custom {
+            color: #ced7e0;
+            background-color: #263238;
+            border: 1px solid #2effab;
+        }
+
+        .btn-custom.active {
+            background-color: #2effab;
+            color: #1f2932;
+            border-color: #2effab;
+        }
+
+        .trade-log-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .trade-log {
+            background-color: #1f2932;
+            color: #ced7e0;
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+        }
+
+        .trade-log table {
+            color: #ced7e0;
+            width: 100%;
+        }
+
+        .trade-log th,
+        .trade-log td {
+            border: 1px solid #2effab;
+            padding: 8px;
+        }
+
+        .trade-log th {
+            background-color: #1f2932;
+            cursor: pointer;
+        }
+
+        .trade-log tr:nth-child(even) {
+            background-color: #263238;
+        }
+
+        .btn-custom {
+            color: #ced7e0;
+            background-color: #263238;
+            border: 1px solid #2effab;
+        }
+
+        .btn-custom.active {
+            background-color: #2effab;
+            color: #1f2932;
+            border-color: #2effab;
+        }
+
+        .trade-log select,
+        .trade-log input[type="text"],
+        .trade-log input[type="number"] {
+            width: 100%;
+            padding: 4px;
+            box-sizing: border-box;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+            color: #ced7e0;
+        }
+
+        .trade-log input[readonly] {
+            background-color: #1f2932;
+            border: none;
+            color: #ced7e0;
+        }
+
+        .modal-content {
+            background-color: #1f2932;
+            color: #ced7e0;
+        }
+
+        .add-trade-form label {
+            color: #ced7e0;
+        }
+
+        .add-trade-form button {
+            width: 100%;
+        }
+
+        .add-trade-form input,
+        .add-trade-form select {
+            width: 100%;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+            color: #ced7e0;
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <h1 class="text-center my-4">Open Trades Overview</h1>
+
+        <!-- Statistics Cards -->
+        <div class="row mt-4">
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card stat-card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title"># Open Trades</h5>
+                        <p class="card-text" id="total-open-trades">{{ total_open_trades }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card stat-card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Exposure</h5>
+                        <p class="card-text" id="total-exposure">
+                            ${{ "{:,.2f}".format(total_exposure) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card stat-card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total $ at Risk</h5>
+                        <p class="card-text" id="total-at-risk">
+                            ${{ "{:,.2f}".format(total_at_risk) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="card stat-card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Current $ Profit/Loss</h5>
+                        <p class="card-text" id="current-profit-loss">
+                            ${{ "{:,.2f}".format(total_current_pl) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="trade-log-container">
+            <div class="trade-log">
+                <h2 class="text-center my-4">Open Trades</h2>
+                <form id="tradeLogForm" method="post" action="{{ url_for('bulk_delete_open_trades') }}">
+                    <div class="mb-3 d-flex justify-content-between">
+                        <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#addTradeModal">Manually Add Open Trade</button>
+                        <button type="button" class="btn btn-danger btn-sm" id="deleteSelectedButton">Delete Selected</button>
+                    </div>
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="select-all"></th>
+                                <th onclick="sortTable(1)">Opened</th>
+                                <th onclick="sortTable(2)">Market</th>
+                                <th onclick="sortTable(3)">Direction</th>
+                                <th onclick="sortTable(4)">Size</th>
+                                <th onclick="sortTable(5)">Opening</th>
+                                <th onclick="sortTable(6)">Stop Loss $</th>
+                                <th onclick="sortTable(7)">Potential Loss %</th>
+                                <th onclick="sortTable(8)">Last Price</th>
+                                <th onclick="sortTable(9)">Current P/L $</th>
+                                <th onclick="sortTable(10)">Current P/L %</th>
+                                <th>Setup Type</th>
+                                <th>Note</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trade in open_trades %}
+                            <tr data-id="{{ trade.id }}">
+                                <td><input type="checkbox" class="trade-checkbox" name="selected_trades[]" value="{{ trade.id }}"></td>
+                                <td>{{ trade.Opened }}</td>
+                                <td>{{ trade.Market }}</td>
+                                <td>{{ trade.Direction }}</td>
+                                <td>{{ "{:,}".format(trade.Size|int) }}</td>
+                                <td>${{ "{:,.2f}".format(trade.Opening|float) }}</td>
+                                <td>${{ "{:,.2f}".format(trade.Stop_Loss|float) }}</td>
+                                <td>{{ "{:,.2f}".format((trade.potential_loss_percentage or 0.0)|float) }}%</td>
+                                <td>${{ "{:,.2f}".format((trade.last_price|float if trade.last_price else 0)) }}</td>
+                                <td>
+                                    {% set current_pl = (trade.last_price|float - trade.Opening|float) * trade.Size %}
+                                    ${{ "{:,.2f}".format(current_pl) }}
+                                </td>
+                                <td>
+                                    {% set current_pl_percent = ((trade.last_price|float - trade.Opening|float) / trade.Opening|float) * 100 %}
+                                    {{ "{:,.2f}".format(current_pl_percent) }}%
+                                </td>
+                                <td>
+                                    <select name="setup_type" class="form-control" onchange="autoSave(this, '{{ trade.id }}')">
+                                        <option value="No setup selected" {% if trade.setup_type == "" %}selected{% endif %}>No setup selected</option>
+                                        <option value="Breakout with Pivot" {% if trade.setup_type == "Breakout with Pivot" %}selected{% endif %}>Breakout with Pivot</option>
+                                        <option value="DTP" {% if trade.setup_type == "DTP" %}selected{% endif %}>DTP</option>
+                                        <option value="Pullback Buy" {% if trade.setup_type == "Pullback Buy" %}selected{% endif %}>Pullback Buy</option>
+                                        <option value="Pullback Buy to base" {% if trade.setup_type == "Pullback Buy to base" %}selected{% endif %}>Pullback Buy to base</option>
+                                        <option value="Powerbase" {% if trade.setup_type == "Powerbase" %}selected{% endif %}>Powerbase</option>
+                                        <option value="Century Play" {% if trade.setup_type == "Century Play" %}selected{% endif %}>Century Play</option>
+                                        <option value="Other" {% if trade.setup_type == "Other" %}selected{% endif %}>Other</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" name="note" value="{{ trade.note }}" class="form-control" maxlength="100" onchange="autoSave(this, '{{ trade.id }}')"></td>
+                                <td>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete('{{ trade.id }}')">Delete</button>
+                                    <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#closeTradeModal" onclick="populateCloseTradeForm('{{ trade.id }}', '{{ trade.Opened }}', '{{ trade.Market }}', '{{ trade.Direction }}', '{{ trade.Size }}', '{{ trade.Opening }}', '{{ trade.Stop_Loss }}', '{{ trade.setup_type }}', '{{ trade.note }}')">Close trade</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Close Trade Modal -->
+    <div class="modal fade" id="closeTradeModal" tabindex="-1" role="dialog" aria-labelledby="closeTradeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="closeTradeModalLabel">Close Trade</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ url_for('close_trade') }}" method="post">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="closed-date">Closed Date:</label>
+                            <input type="date" id="closed-date" name="closed-date" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="closed-time">Closed Time (optional):</label>
+                            <input type="text" id="closed-time" name="closed-time" class="form-control time-input" placeholder="HH:mm:ss">
+                        </div>
+                        <div class="form-group">
+                            <label for="closing-price">Closing Price:</label>
+                            <input type="number" step="0.01" id="closing-price" name="closing-price" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="commissions">Commissions:</label>
+                            <input type="number" step="0.01" id="commissions" name="commissions" class="form-control">
+                        </div>
+                        <input type="hidden" name="trade_id" id="close-trade-id">
+                        <input type="hidden" name="Opened" id="close-trade-opened">
+                        <input type="hidden" name="Market" id="close-trade-market">
+                        <input type="hidden" name="Direction" id="close-trade-direction">
+                        <input type="hidden" name="Size" id="close-trade-size">
+                        <input type="hidden" name="Opening" id="close-trade-opening">
+                        <input type="hidden" name="Stop_Loss" id="close-trade-stop-loss">
+                        <input type="hidden" name="setup_type" id="close-trade-setup-type">
+                        <input type="hidden" name="note" id="close-trade-note">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Close Trade</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Trade Modal -->
+    <div class="modal fade" id="addTradeModal" tabindex="-1" role="dialog" aria-labelledby="addTradeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addTradeModalLabel">Add Trade</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ url_for('add_open_trade') }}" method="post" class="add-trade-form" onsubmit="formatDates()">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="opened-date">Opened Date:</label>
+                            <input type="date" id="opened-date" name="opened-date" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="opened-time">Opened Time (optional):</label>
+                            <input type="text" id="opened-time" name="opened-time" class="form-control time-input" placeholder="HH:mm:ss">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="Market" placeholder="Market" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <select name="Direction" class="form-control">
+                                <option value="BUY">Buy</option>
+                                <option value="SELL">Sell</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input type="number" name="Size" placeholder="Size/Quantity" class="form-control" id="size">
+                        </div>
+                        <div class="form-group">
+                            <input type="number" step="0.01" name="Opening" placeholder="Opening Price" class="form-control" id="opening">
+                        </div>
+                        <div class="form-group">
+                            <input type="number" step="0.01" name="Stop_Loss" placeholder="Stop Loss" class="form-control" id="stop_loss">
+                        </div>
+                        <div class="form-group">
+                            <select name="setup_type" class="form-control">
+                                <option value="No setup selected">No setup selected</option>
+                                <option value="Breakout with Pivot">Breakout with Pivot</option>
+                                <option value="DTP">DTP</option>
+                                <option value="Pullback Buy">Pullback Buy</option>
+                                <option value="Pullback Buy to base">Pullback Buy to base</option>
+                                <option value="Powerbase">Powerbase</option>
+                                <option value="Century Play">Century Play</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="note" placeholder="Note" class="form-control">
+                        </div>
+                        <!-- Hidden fields -->
+                        <input type="hidden" name="Opened" id="opened-hidden">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Add</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script tags start here -->
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function confirmDelete(tradeId) {
+                if (confirm("Are you sure you want to delete this trade?")) {
+                    fetch(`/delete_open_trade/${tradeId}`, {
+                            method: 'POST'
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                window.location.reload(); // Reload the page to reflect the changes
+                            } else {
+                                alert('Failed to delete trade. Please try again.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('An error occurred. Please try again.');
+                        });
+                }
+            }
+
+            function sortTable(columnIndex) {
+                var table = document.querySelector(".trade-log table");
+                var rows = Array.from(table.querySelectorAll("tbody > tr"));
+                var ascending = table.getAttribute("data-sort-ascending") === "true";
+
+                rows.sort((rowA, rowB) => {
+                    var cellA = rowA.cells[columnIndex].innerText;
+                    var cellB = rowB.cells[columnIndex].innerText;
+
+                    if (!isNaN(cellA) && !isNaN(cellB)) {
+                        cellA = parseFloat(cellA);
+                        cellB = parseFloat(cellB);
+                    }
+
+                    if (cellA < cellB) {
+                        return ascending ? -1 : 1;
+                    }
+                    if (cellA > cellB) {
+                        return ascending ? 1 : -1;
+                    }
+                    return 0;
+                });
+
+                rows.forEach(row => table.querySelector("tbody").appendChild(row));
+                table.setAttribute("data-sort-ascending", !ascending);
+            }
+
+            document.getElementById('select-all').addEventListener('change', function() {
+                var checkboxes = document.querySelectorAll('.trade-checkbox');
+                for (var checkbox of checkboxes) {
+                    checkbox.checked = this.checked;
+                }
+            });
+
+            document.getElementById('deleteSelectedButton').addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent default form submission
+                var form = document.getElementById('tradeLogForm');
+                var selectedTrades = form.querySelectorAll('.trade-checkbox:checked');
+                
+                if (selectedTrades.length === 0) {
+                    alert('Please select at least one trade to delete.');
+                    return;
+                }
+                
+                if (confirm('Warning: This will delete all selected trades. Click OK to confirm.')) {
+                    var formData = new FormData(form);
+                    
+                    fetch('{{ url_for("bulk_delete_open_trades") }}', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            alert('Selected trades deleted successfully');
+                            window.location.reload(); // Reload the page to reflect changes
+                        } else {
+                            alert('Failed to delete trades. Please try again.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred. Please try again.');
+                    });
+                }
+            });
+
+            window.confirmDelete = confirmDelete;
+            window.sortTable = sortTable;
+        });
+
+        function autoSave(element, tradeId) {
+            const formData = new FormData();
+            formData.append(element.name, element.value);
+            formData.append('trade_id', tradeId);
+
+            fetch('{{ url_for("save_open_trade_log") }}', {  // Ensure this matches your Flask route
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('Auto-save successful');
+                } else {
+                    console.error('Auto-save failed: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Auto-save error:', error);
+            });
+        }
+
+        function formatDates() {
+            function formatDateTime(dateId, timeId, hiddenId) {
+                const dateInput = document.getElementById(dateId);
+                const timeInput = document.getElementById(timeId);
+                const hiddenInput = document.getElementById(hiddenId);
+
+                if (dateInput.value) {
+                    const date = new Date(dateInput.value);
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+
+                    const time = timeInput.value || '00:00:00';
+
+                    hiddenInput.value = `${year}-${month}-${day} ${time}`;
+                } else {
+                    hiddenInput.value = '';
+                }
+            }
+
+            formatDateTime('opened-date', 'opened-time', 'opened-hidden');
+            formatDateTime('closed-date', 'closed-time', 'closed-hidden');
+        }
+
+        function populateCloseTradeForm(tradeId, opened, market, direction, size, opening, stopLoss, setupType, note) {
+            document.getElementById('close-trade-id').value = tradeId;
+            document.getElementById('close-trade-opened').value = opened;
+            document.getElementById('close-trade-market').value = market;
+            document.getElementById('close-trade-direction').value = direction;
+            document.getElementById('close-trade-size').value = size;
+            document.getElementById('close-trade-opening').value = opening;
+            document.getElementById('close-trade-stop-loss').value = stopLoss;
+            document.getElementById('close-trade-setup-type').value = setupType;
+            document.getElementById('close-trade-note').value = note;
+        }
+    </script>
+</body>
+</html>

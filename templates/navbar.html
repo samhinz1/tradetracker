@@ -7,9 +7,6 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="upload_data">Upload Data</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link" href="overview?filter=all">Overview & Trade Statistics</a>
                 </li>
                 <li class="nav-item">
@@ -19,7 +16,16 @@
                     <a class="nav-link" href="calendar">Calendar</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="trade_log">Trade Log</a>
+                    <a class="nav-link" href="http://127.0.0.1:5000/weekly_journal">Weekly Journal</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="tradeLogDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Trade Log
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="tradeLogDropdown">
+                        <a class="dropdown-item" href="closed_trades">Closed Trades</a>
+                        <a class="dropdown-item" href="open_trades">Open Trades</a>
+                    </div>
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

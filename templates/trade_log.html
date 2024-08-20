@@ -3,18 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Log</title>
+    <title>Closed Trades</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <style>
         body {
             background-color: #1f2932;
             color: #2effab;
         }
+
         .trade-log-container {
             display: flex;
             justify-content: center;
             margin-top: 20px;
         }
+
         .trade-log {
             background-color: #1f2932;
             color: #ced7e0;
@@ -22,76 +25,132 @@
             max-width: 1200px;
             text-align: center;
         }
+
         .trade-log table {
             color: #ced7e0;
             width: 100%;
         }
-        .trade-log th, .trade-log td {
+
+        .trade-log th,
+        .trade-log td {
             border: 1px solid #2effab;
             padding: 8px;
         }
+
         .trade-log th {
             background-color: #1f2932;
             cursor: pointer;
         }
+
         .trade-log tr:nth-child(even) {
             background-color: #263238;
         }
+
         .btn-custom {
             color: #ced7e0;
             background-color: #263238;
             border: 1px solid #2effab;
         }
+
         .btn-custom.active {
             background-color: #2effab;
             color: #1f2932;
             border-color: #2effab;
         }
+
         .trade-log select,
-        .trade-log input[type="text"] {
-            width: 150px;
+        .trade-log input[type="text"],
+        .trade-log input[type="number"] {
+            width: 100%;
+            padding: 4px;
+            box-sizing: border-box;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+            color: #ced7e0;
+        }
+
+        .trade-log input[readonly] {
+            background-color: #1f2932;
+            border: none;
+            color: #ced7e0;
+        }
+
+        .modal-content {
+            background-color: #1f2932;
+            color: #ced7e0;
+        }
+
+        .add-trade-form label {
+            color: #ced7e0;
+        }
+
+        .add-trade-form button {
+            width: 100%;
+        }
+
+        .add-trade-form input,
+        .add-trade-form select {
+            width: 100%;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+            color: #ced7e0;
         }
     </style>
 </head>
+
 <body>
     {% include 'navbar.html' %}
     <div class="container">
         <div class="trade-log-container">
             <div class="trade-log">
                 <h2 class="text-center my-4">Trade Log</h2>
-                <form action="{{ url_for('save_trade_log') }}" method="post">
+                <div class="mb-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#addTradeModal">Manually Add Trade</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="uploadNewDataButton">Bulk Upload Data</button>
+                    <button type="button" class="btn btn-danger btn-sm" id="deleteSelectedButton">Delete Selected</button>
+                </div>
+                <form id="uploadForm" action="{{ url_for('merge_file') }}" method="post" enctype="multipart/form-data" class="form-inline mt-3" style="display: none;">
+                    <div class="form-group mr-2">
+                        <input type="file" name="file" class="form-control-file" id="fileInput">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </form>
+                <form id="tradeLogForm" method="post" action="{{ url_for('bulk_delete') }}">
                     <table class="table table-striped table-bordered">
                         <thead>
                             <tr>
-                                <th onclick="sortTable(0)">Opened</th>
-                                <th onclick="sortTable(1)">Market</th>
-                                <th onclick="sortTable(2)">Direction</th>
-                                <th onclick="sortTable(3)">Size</th>
-                                <th onclick="sortTable(4)">Opening</th>
-                                <th onclick="sortTable(5)">Closing</th>
-                                <th onclick="sortTable(6)">P/L</th>
-                                <th onclick="sortTable(7)">Total</th>
-                                <th onclick="sortTable(8)">Commissions</th>
-                                <th onclick="sortTable(9)">P/L %</th>
+                                <th><input type="checkbox" id="select-all"></th>
+                                <th onclick="sortTable(1)">Opened</th>
+                                <th onclick="sortTable(2)">Market</th>
+                                <th onclick="sortTable(3)">Direction</th>
+                                <th onclick="sortTable(4)">Size</th>
+                                <th onclick="sortTable(5)">Opening</th>
+                                <th onclick="sortTable(6)">Closing</th>
+                                <th onclick="sortTable(7)">P/L</th>
+                                <th onclick="sortTable(8)">Total</th>
+                                <th onclick="sortTable(9)">Commissions</th>
+                                <th onclick="sortTable(10)">P/L %</th>
                                 <th>Setup Type</th>
                                 <th>Note</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for trade in trade_log %}
-                            <tr>
+                            <tr data-index="{{ loop.index0 }}">
+                                <td><input type="checkbox" class="trade-checkbox" name="selected_trades" value="{{ trade.id }}"></td>
                                 <td>{{ trade.Opened }}</td>
                                 <td>{{ trade.Market }}</td>
                                 <td>{{ trade.Direction }}</td>
                                 <td>{{ trade.Size }}</td>
                                 <td>{{ trade.Opening }}</td>
                                 <td>{{ trade.Closing }}</td>
-                                <td>{{ '%.1f' % trade['P/L'] }}</td>
+                                <td>{{ '%.1f' % trade['PL'] }}</td>
                                 <td>{{ trade.Total }}</td>
-                                <td>{{ '%.1f' % trade.Commissions }}</td>
+                                <td>{{ '%.1f' % (trade.Comm if trade.Comm != 0 else trade.Commissions) }}</td>
                                 <td>{{ '%.2f' % trade['P/L %'] }}</td>
                                 <td>
-                                    <select name="setup_type_{{ loop.index }}" class="form-control">
+                                    <select name="setup_type" class="form-control" onchange="autoSave(this, '{{ trade.id }}')">
                                         <option value="No setup selected" {% if trade.setup_type == "" %}selected{% endif %}>No setup selected</option>
                                         <option value="Breakout with Pivot" {% if trade.setup_type == "Breakout with Pivot" %}selected{% endif %}>Breakout with Pivot</option>
                                         <option value="DTP" {% if trade.setup_type == "DTP" %}selected{% endif %}>DTP</option>
@@ -102,55 +161,313 @@
                                         <option value="Other" {% if trade.setup_type == "Other" %}selected{% endif %}>Other</option>
                                     </select>
                                 </td>
+                                <td><input type="text" name="note" value="{{ trade.note }}" class="form-control" maxlength="100" onchange="autoSave(this, '{{ trade.id }}')"></td>
                                 <td>
-                                    <input type="text" name="note_{{ loop.index }}" class="form-control" maxlength="100" value="{{ trade.note }}">
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete('{{ trade.id }}')">Delete</button>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                    <button type="submit" class="btn btn-primary">Save Trade Log</button>
-                </form>
-                <form action="{{ url_for('merge_file') }}" method="post" enctype="multipart/form-data" class="form-inline mt-3">
-                    <div class="form-group mr-2">
-                        <input type="file" name="file" class="form-control-file">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Upload New Data</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <!-- Add Trade Modal -->
+    <div class="modal fade" id="addTradeModal" tabindex="-1" role="dialog" aria-labelledby="addTradeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addTradeModalLabel">Add Trade</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ url_for('add_trade') }}" method="post" class="add-trade-form" onsubmit="formatDates()">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="opened-date">Opened Date:</label>
+                            <input type="date" id="opened-date" name="opened-date" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="opened-time">Opened Time (optional):</label>
+                            <input type="text" id="opened-time" name="opened-time" class="form-control time-input" placeholder="HH:mm:ss">
+                        </div>
+                        <div class="form-group">
+                            <label for="closed-date">Closed Date:</label>
+                            <input type="date" id="closed-date" name="closed-date" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="closed-time">Closed Time (optional):</label>
+                            <input type="text" id="closed-time" name="closed-time" class="form-control time-input" placeholder="HH:mm:ss">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="Market" placeholder="Market" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <select name="Direction" class="form-control">
+                                <option value="BUY">Buy</option>
+                                <option value="SELL">Sell</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input type="number" name="Size" placeholder="Size/Quantity" class="form-control" id="size">
+                        </div>
+                        <div class="form-group">
+                            <input type="number" name="Opening" placeholder="Opening Price" class="form-control" id="opening">
+                        </div>
+                        <div class="form-group">
+                            <input type="number" name="Closing" placeholder="Closing Price" class="form-control" id="closing">
+                        </div>
+                        <div class="form-group">
+                            <input type="number" name="PL" placeholder="P/L" class="form-control" id="pl" readonly>
+                        </div>
+                        <div class="form-group">
+                            <input type="number" name="Total" placeholder="Total" class="form-control" id="total" readonly>
+                        </div>
+                        <div class="form-group">
+                            <input type="number" name="Commissions" placeholder="Commissions" class="form-control" id="commissions">
+                        </div>
+                        <div class="form-group">
+                            <input type="number" name="PL_percent" placeholder="P/L %" class="form-control" id="pl_percent" readonly>
+                        </div>
+                        <div class="form-group">
+                            <select name="setup_type" class="form-control">
+                                <option value="No setup selected">No setup selected</option>
+                                <option value="Breakout with Pivot">Breakout with Pivot</option>
+                                <option value="DTP">DTP</option>
+                                <option value="Pullback Buy">Pullback Buy</option>
+                                <option value="Pullback Buy to base">Pullback Buy to base</option>
+                                <option value="Powerbase">Powerbase</option>
+                                <option value="Century Play">Century Play</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="note" placeholder="Note" class="form-control">
+                        </div>
+                        <!-- Hidden fields -->
+                        <input type="hidden" name="Opened" id="opened-hidden">
+                        <input type="hidden" name="Closed" id="closed-hidden">
+                        <input type="hidden" name="Closing_Ref" value="default_closing_ref">
+                        <input type="hidden" name="Opening_Ref" value="default_opening_ref">
+                        <input type="hidden" name="Period" value="default_period">
+                        <input type="hidden" name="Trade_Ccy" value="default_trade_ccy">
+                        <input type="hidden" name="Funding" value="0">
+                        <input type="hidden" name="Borrowing" value="0">
+                        <input type="hidden" name="Dividends" value="0">
+                        <input type="hidden" name="LR_Prem" value="0">
+                        <input type="hidden" name="Others" value="0">
+                        <input type="hidden" name="Comm_Ccy" value="default_comm_ccy">
+                        <input type="hidden" name="Comm" value="0">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Add</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script tags start here -->
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        function sortTable(columnIndex) {
-            var table = document.querySelector(".trade-log table");
-            var rows = Array.from(table.querySelectorAll("tbody > tr"));
-            var ascending = table.getAttribute("data-sort-ascending") === "true";
+    function confirmDelete(tradeId) {
+        if (confirm("Are you sure you want to delete this trade?")) {
+            fetch(`/delete_trade/${tradeId}`, {
+                    method: 'POST'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload(); // Reload the page to reflect the changes
+                    } else {
+                        alert('Failed to delete trade. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+        }
+    }
 
-            rows.sort((rowA, rowB) => {
-                var cellA = rowA.cells[columnIndex].innerText;
-                var cellB = rowB.cells[columnIndex].innerText;
+    function sortTable(columnIndex) {
+        var table = document.querySelector(".trade-log table");
+        var rows = Array.from(table.querySelectorAll("tbody > tr"));
+        var ascending = table.getAttribute("data-sort-ascending") === "true";
 
-                if (!isNaN(cellA) && !isNaN(cellB)) {
-                    cellA = parseFloat(cellA);
-                    cellB = parseFloat(cellB);
+        rows.sort((rowA, rowB) => {
+            var cellA = rowA.cells[columnIndex].innerText;
+            var cellB = rowB.cells[columnIndex].innerText;
+
+            if (!isNaN(cellA) && !isNaN(cellB)) {
+                cellA = parseFloat(cellA);
+                cellB = parseFloat(cellB);
+            }
+
+            if (cellA < cellB) {
+                return ascending ? -1 : 1;
+            }
+            if (cellA > cellB) {
+                return ascending ? 1 : -1;
+            }
+            return 0;
+        });
+
+        rows.forEach(row => table.querySelector("tbody").appendChild(row));
+        table.setAttribute("data-sort-ascending", !ascending);
+    }
+
+    document.addEventListener('input', function() {
+        var size = parseFloat(document.getElementById('size').value) || 0;
+        var opening = parseFloat(document.getElementById('opening').value) || 0;
+        var closing = parseFloat(document.getElementById('closing').value) || 0;
+        var commissions = parseFloat(document.getElementById('commissions').value) || 0;
+
+        // Ensure commissions is always negative
+        commissions = commissions > 0 ? -commissions : commissions;
+        document.getElementById('commissions').value = commissions;
+
+        var pl = ((closing - opening) * size).toFixed(1);
+        document.getElementById('pl').value = pl;
+
+        var total = (parseFloat(pl) + parseFloat(commissions)).toFixed(1);
+        document.getElementById('total').value = total;
+
+        var pl_percent = (((closing - opening) / opening) * 100).toFixed(2);
+        document.getElementById('pl_percent').value = pl_percent;
+    });
+
+    function formatDates() {
+        function formatDateTime(dateId, timeId, hiddenId) {
+            const dateInput = document.getElementById(dateId);
+            const timeInput = document.getElementById(timeId);
+            const hiddenInput = document.getElementById(hiddenId);
+
+            if (dateInput.value) {
+                const date = new Date(dateInput.value);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+
+                let time = timeInput.value;
+                if (!time) {
+                    time = '00:00:00'; // Default to '00:00:00' if time is not provided
                 }
 
-                if (cellA < cellB) {
-                    return ascending ? -1 : 1;
-                }
-                if (cellA > cellB) {
-                    return ascending ? 1 : -1;
-                }
-                return 0;
+                hiddenInput.value = `${year}-${month}-${day} ${time}`;
+                console.log(`Formatted ${dateId} and ${timeId} to ${hiddenInput.value}`);
+            } else {
+                hiddenInput.value = '';
+            }
+        }
+
+        formatDateTime('opened-date', 'opened-time', 'opened-hidden');
+        formatDateTime('closed-date', 'closed-time', 'closed-hidden');
+    }
+
+    // Ensure the date appears in the input when selected from the calendar
+    document.getElementById('opened-date').addEventListener('change', function() {
+        this.dispatchEvent(new Event('input'));
+    });
+    document.getElementById('closed-date').addEventListener('change', function() {
+        this.dispatchEvent(new Event('input'));
+    });
+
+    function autoSave(element, tradeId) {
+        const formData = new FormData();
+        formData.append(element.name, element.value);
+        formData.append('trade_id', tradeId);
+
+        console.log("Trade ID:", tradeId);
+        console.log("Element Name:", element.name);
+        console.log("Element Value:", element.value);
+
+        fetch('{{ url_for("save_trade_log") }}', {
+            method: 'POST',
+            body: formData
+        }).then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('Auto-save successful');
+            } else {
+                console.error('Auto-save failed');
+            }
+        }).catch(error => {
+            console.error('Auto-save error:', error);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        function setupTimeInput(inputId) {
+            const input = document.getElementById(inputId);
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 6) value = value.slice(0, 6);
+                const hours = value.slice(0, 2);
+                const minutes = value.slice(2, 4);
+                const seconds = value.slice(4, 6);
+
+                let formattedTime = '';
+                if (hours) formattedTime += hours;
+                if (minutes) formattedTime += ':' + minutes;
+                if (seconds) formattedTime += ':' + seconds;
+
+                e.target.value = formattedTime;
             });
 
-            rows.forEach(row => table.querySelector("tbody").appendChild(row));
-            table.setAttribute("data-sort-ascending", !ascending);
+            input.addEventListener('blur', function(e) {
+                const [hours, minutes, seconds] = e.target.value.split(':');
+                const paddedHours = hours ? hours.padStart(2, '0') : '00';
+                const paddedMinutes = minutes ? minutes.padStart(2, '0') : '00';
+                const paddedSeconds = seconds ? seconds.padStart(2, '0') : '00';
+                e.target.value = `${paddedHours}:${paddedMinutes}:${paddedSeconds}`;
+            });
         }
+
+        setupTimeInput('opened-time');
+        setupTimeInput('closed-time');
+
+        // Show file input on "Upload New Data" button click
+        document.getElementById('uploadNewDataButton').addEventListener('click', function() {
+            document.getElementById('fileInput').click();
+        });
+
+        // Select/Deselect all checkboxes
+        document.getElementById('select-all').addEventListener('change', function() {
+            var checkboxes = document.querySelectorAll('.trade-checkbox');
+            for (var checkbox of checkboxes) {
+                checkbox.checked = this.checked;
+            }
+        });
+
+        // Automatically submit the form after file selection
+        document.getElementById('fileInput').addEventListener('change', function() {
+            document.getElementById('uploadForm').submit();
+        });
+
+        // New code for handling the "Delete Selected" button
+        document.getElementById('deleteSelectedButton').addEventListener('click', function() {
+            var form = document.getElementById('tradeLogForm');
+            var selectedTrades = form.querySelectorAll('.trade-checkbox:checked');
+            
+            if (selectedTrades.length === 0) {
+                alert('Please select at least one trade to delete.');
+                return;
+            }
+            
+            if (confirm('Warning: This will delete all selected trades. Click OK to confirm.')) {
+                form.submit();
+            }
+        });
+    });
     </script>
+
 </body>
 </html>

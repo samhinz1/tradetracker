@@ -1,10 +1,12 @@
 import os
 import pandas as pd
+import sqlite3
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.io as pio
 
 UPLOAD_FOLDER = 'uploads'
+DB_FILE_PATH = 'instance/site.db'
 
 def save_file_path(user_id, file_name):
     user_folder = os.path.join(UPLOAD_FOLDER, str(user_id))
@@ -14,57 +16,103 @@ def save_file_path(user_id, file_name):
     return file_path
 
 def read_last_file_path(user_id):
-    user_folder = os.path.join(UPLOAD_FOLDER, str(user_id))
-    file_path_file = os.path.join(user_folder, 'last_file_path.txt')
-    if os.path.exists(file_path_file):
-        with open(file_path_file, 'r') as f:
-            return f.read().strip()
+    conn = sqlite3.connect(DB_FILE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT file_path FROM file_paths WHERE user_id = ?', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    if result:
+        return result[0]
     return None
 
 def store_last_file_path(user_id, file_path):
-    user_folder = os.path.join(UPLOAD_FOLDER, str(user_id))
-    file_path_file = os.path.join(user_folder, 'last_file_path.txt')
-    if not os.path.exists(user_folder):
-        os.makedirs(user_folder)
-    with open(file_path_file, 'w') as f:
-        f.write(file_path)
+    conn = sqlite3.connect(DB_FILE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO file_paths (user_id, file_path) 
+        VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET file_path=excluded.file_path;
+    ''', (user_id, file_path))
+    conn.commit()
+    conn.close()
 
 def load_and_clean_data(file_path):
-    with open(file_path, 'r') as file:
-        first_seven_rows = [next(file) for _ in range(7)]
-    
     trades_df = pd.read_csv(file_path, skiprows=7, on_bad_lines='skip')
     trades_df.columns = trades_df.columns.str.strip()
 
-    if 'P/L' in trades_df.columns and trades_df['P/L'].dtype == object:
-        trades_df['P/L'] = trades_df['P/L'].str.replace(',', '').astype(float).round(1)
-    elif 'P/L' in trades_df.columns:
-        trades_df['P/L'] = trades_df['P/L'].astype(float).round(1)
-    else:
-        trades_df['P/L'] = 0.0
+    column_mapping = {
+        'Closing Ref': 'Closing_Ref',
+        'Closed': 'Closed',
+        'Opening Ref': 'Opening_Ref',
+        'Opened': 'Opened',
+        'Market': 'Market',
+        'Period': 'Period',
+        'Direction': 'Direction',
+        'Size': 'Size',
+        'Opening': 'Opening',
+        'Closing': 'Closing',
+        'Trade Ccy.': 'Trade_Ccy',
+        'P/L': 'PL',
+        'Funding': 'Funding',
+        'Borrowing': 'Borrowing',
+        'Dividends': 'Dividends',
+        'LR Prem.': 'LR_Prem',
+        'Others': 'Others',
+        'Comm. Ccy.': 'Comm_Ccy',
+        'Comm.': 'Comm',
+        'Total': 'Total'
+    }
 
-    if 'Total' in trades_df.columns and trades_df['Total'].dtype == object:
-        trades_df['Total'] = trades_df['Total'].str.replace(',', '').astype(float)
-    elif 'Total' in trades_df.columns:
-        trades_df['Total'] = trades_df['Total'].astype(float)
-    else:
-        trades_df['Total'] = trades_df['P/L']
+    trades_df.rename(columns=column_mapping, inplace=True)
+
+    trades_df['PL'] = trades_df['PL'].str.replace(',', '').astype(float).round(1)
+    trades_df['Total'] = trades_df['Total'].str.replace(',', '').astype(float)
+    trades_df['Comm'] = trades_df['Total'] - trades_df['PL']
+    trades_df['Comm'] = trades_df['Comm'].round(1)
+
+    trades_df['P/L %'] = ((trades_df['Closing'] - trades_df['Opening']) / trades_df['Opening']) * 100
+    trades_df['P/L %'] = trades_df['P/L %'].round(2)
+
+    # Convert 'Closed' column to datetime and handle errors
+    trades_df['Closed'] = pd.to_datetime(trades_df['Closed'], dayfirst=True, errors='coerce')
+    
+    # Drop rows where 'Closed' could not be converted to a date
+    trades_df = trades_df.dropna(subset=['Closed'])
+
+    # Convert to date only (no time component)
+    trades_df['Closed'] = trades_df['Closed'].dt.date
+
+    if 'setup_type' not in trades_df.columns:
+        trades_df['setup_type'] = ''
+    trades_df['setup_type'] = trades_df['setup_type'].fillna('')
+    if 'note' not in trades_df.columns:
+        trades_df['note'] = ''
+    trades_df['note'] = trades_df['note'].fillna('')
+
+    return trades_df
+
+
+def load_and_clean_data_from_sqlite():
+    conn = sqlite3.connect(DB_FILE_PATH)
+    trades_df = pd.read_sql_query("SELECT * FROM trades", conn)
+    conn.close()
+
+    trades_df.columns = trades_df.columns.str.strip()
+    trades_df['PL'] = trades_df['PL'].astype(float).round(1)
+    trades_df['Total'] = trades_df['Total'].astype(float)
 
     if 'Commissions' not in trades_df.columns:
-        trades_df['Commissions'] = trades_df['Total'] - trades_df['P/L']
+        trades_df['Commissions'] = trades_df['Total'] - trades_df['PL']
     trades_df['Commissions'] = trades_df['Commissions'].round(1)
+        
+    # Convert 'Closed' column to datetime and handle errors
+    trades_df['Closed'] = pd.to_datetime(trades_df['Closed'], dayfirst=True, errors='coerce')
+    
+    # Drop rows where 'Closed' could not be converted to a date
+    trades_df = trades_df.dropna(subset=['Closed'])
 
-    if 'Closing' in trades_df.columns and 'Opening' in trades_df.columns:
-        trades_df['P/L %'] = ((trades_df['Closing'] - trades_df['Opening']) / trades_df['Opening']) * 100
-        trades_df['P/L %'] = trades_df['P/L %'].round(2)
-    else:
-        trades_df['P/L %'] = 0.0
-
-    if 'Closed' in trades_df.columns:
-        try:
-            trades_df['Closed'] = pd.to_datetime(trades_df['Closed'], format='%d-%m-%Y %H:%M:%S').dt.date
-        except ValueError:
-            trades_df['Closed'] = pd.to_datetime(trades_df['Closed'], format='%Y-%m-%d').dt.date
+    # Convert to date only (no time component)
+    trades_df['Closed'] = trades_df['Closed'].dt.date
 
     if 'setup_type' not in trades_df.columns:
         trades_df['setup_type'] = ''
@@ -74,9 +122,13 @@ def load_and_clean_data(file_path):
         trades_df['note'] = ''
     trades_df['note'] = trades_df['note'].fillna('')
 
-    return trades_df, first_seven_rows
+    return trades_df
+
 
 def filter_data(trades_df, filter_type):
+    # Ensure 'Closed' column is in datetime.date format
+    trades_df['Closed'] = pd.to_datetime(trades_df['Closed'], errors='coerce').dt.date
+
     today = datetime.today().date()
     if filter_type == 'prior_week':
         start_date = today - timedelta(days=today.weekday() + 7)
@@ -107,7 +159,18 @@ def filter_data(trades_df, filter_type):
         filtered_df = trades_df
     return filtered_df
 
+
 def perform_analysis(trades_df):
+    trades_df['Closing'] = pd.to_numeric(trades_df['Closing'], errors='coerce')
+    trades_df['Opening'] = pd.to_numeric(trades_df['Opening'], errors='coerce')
+    trades_df['Total'] = pd.to_numeric(trades_df['Total'], errors='coerce')
+    trades_df['Commissions'] = pd.to_numeric(trades_df.get('Commissions', 0), errors='coerce')
+    trades_df['Comm'] = pd.to_numeric(trades_df.get('Comm', 0), errors='coerce')
+    trades_df['PL'] = pd.to_numeric(trades_df['PL'], errors='coerce')
+
+    trades_df['P/L %'] = ((trades_df['Closing'] - trades_df['Opening']) / trades_df['Opening']) * 100
+    trades_df['P/L %'] = trades_df['P/L %'].round(2)
+
     winners = trades_df[trades_df['Total'] > 0]
     losers = trades_df[trades_df['Total'] <= 0]
     num_winners = len(winners)
@@ -121,10 +184,13 @@ def perform_analysis(trades_df):
     expectancy = round(abs((win_rate * avg_win) / (loss_rate * avg_loss)) if loss_rate != 0 else float('inf'), 2)
     daily_pl = trades_df.groupby('Closed')['Total'].sum().reset_index()
     daily_pl['Cumulative P/L'] = daily_pl['Total'].cumsum()
-    total_commissions = round(trades_df['Commissions'].sum())
+
+    # Check for 'Comm' or 'Commissions' column and sum the values
+    total_commissions = round(trades_df['Comm'].sum() + trades_df['Commissions'].sum()) + trades_df['Funding'].sum() 
+
     avg_percent_gain = round(winners['P/L %'].mean(), 2) if num_winners > 0 else 0
     avg_percent_loss = round(losers['P/L %'].mean(), 2) if num_losers > 0 else 0
-    gross_profit_loss = round(trades_df['P/L'].sum())
+    gross_profit_loss = round(trades_df['PL'].sum())
     net_profit = gross_profit_loss - abs(total_commissions)
 
     return (num_winners, num_losers, total_trades, win_loss_ratio, expectancy, daily_pl, total_commissions, avg_win,
@@ -159,7 +225,7 @@ def create_dashboard(num_winners, num_losers, total_trades, win_loss_ratio, expe
 
     equity_curve_html = pio.to_html(equity_curve_fig, full_html=False)
 
-    trades_df['HoverText'] = trades_df.apply(lambda row: f"Market: {row['Market']}<br>P/L: ${row['P/L']}", axis=1)
+    trades_df['HoverText'] = trades_df.apply(lambda row: f"Market: {row['Market']}<br>P/L: ${row['PL']}", axis=1)
     hover_texts = trades_df.groupby('Closed')['HoverText'].apply(lambda x: '<br><br>'.join(x) if len(x) <= 10 else '<br><br>'.join(x[:2]) + '<br><br>...and more trades').reset_index()
     
     daily_pl = pd.merge(daily_pl, hover_texts, on='Closed', how='left')
@@ -206,7 +272,7 @@ def create_dashboard(num_winners, num_losers, total_trades, win_loss_ratio, expe
         "Average % Loss": f"{avg_percent_loss}%"
     }
 
-    columns_to_display = ["Opened", "Market", "Direction", "Size", "Opening", "Closing", "P/L", "Total", "Commissions", "P/L %", "setup_type", "note"]
+    columns_to_display = ["Opened", "Market", "Direction", "Size", "Opening", "Closing", "PL", "Total", "Commissions", "P/L %", "setup_type", "note"]
     trades_df_filtered = trades_df.loc[:, trades_df.columns.intersection(columns_to_display)]
     trade_log_dict = trades_df_filtered.to_dict('records')
 

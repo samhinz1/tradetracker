@@ -1,0 +1,4 @@
+id,Closing_Ref,Closed,Opening_Ref,Opened,Market,Period,Direction,Size,Opening,Closing,Trade_Ccy,PL,Funding,Borrowing,Dividends,LR_Prem,Others,Comm_Ccy,Comm,Total,setup_type,note,Commissions,P/L %,user_id
+fb3029b7-41ec-4c84-85e1-893e39376cf3,default_closing_ref,2024-08-01,default_opening_ref,2024-08-01,AAPL,default_period,BUY,1000.0,20.0,30.0,default_trade_ccy,9000.0,0.0,0.0,0.0,0.0,0.0,default_comm_ccy,,10000.0,Breakout with Pivot,test,-1000.0,50.0,2
+fb01e04e-a532-4c7b-9288-4cc7bb3a0029,default_closing_ref,2024-08-01,default_opening_ref,2024-08-01,AAPL,default_period,BUY,1000.0,20.0,30.0,default_trade_ccy,9000.0,0.0,0.0,0.0,0.0,0.0,default_comm_ccy,,10000.0,DTP,asd,-1000.0,50.0,1
+,default_closing_ref,2024-08-01,default_opening_ref,2024-08-01,AAPL,default_period,BUY,1000.0,20.0,30.0,default_trade_ccy,9000.0,0.0,0.0,0.0,0.0,0.0,default_comm_ccy,,10000.0,Breakout with Pivot,test,-1000.0,50.0,1

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Journal</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <style>
+        body {
+            background-color: #1f2932;
+            color: #2effab;
+        }
+
+        .journal-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .journal-log {
+            background-color: #1f2932;
+            color: #ced7e0;
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+        }
+
+        .journal-log table {
+            color: #ced7e0;
+            width: 100%;
+        }
+
+        .journal-log th,
+        .journal-log td {
+            border: 1px solid #2effab;
+            padding: 8px;
+        }
+
+        .journal-log th {
+            background-color: #1f2932;
+            cursor: pointer;
+        }
+
+        .journal-log tr:nth-child(even) {
+            background-color: #263238;
+        }
+
+        .btn-custom {
+            color: #ced7e0;
+            background-color: #263238;
+            border: 1px solid #2effab;
+        }
+
+        .btn-custom.active {
+            background-color: #2effab;
+            color: #1f2932;
+            border-color: #2effab;
+        }
+
+        .journal-log select,
+        .journal-log input[type="text"],
+        .journal-log input[type="number"] {
+            width: 100%;
+            padding: 4px;
+            box-sizing: border-box;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+            color: #ced7e0;
+        }
+
+        .journal-log input[readonly] {
+            background-color: #1f2932;
+            border: none;
+            color: #ced7e0;
+        }
+
+        .modal-dialog {
+            max-width: 100%;
+            margin: 0;
+            height: 100%;
+        }
+
+        .modal-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #1f2932;
+            color: #ced7e0;
+        }
+
+        .modal-header,
+        .modal-footer {
+            background-color: inherit;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .add-journal-form label {
+            color: #ced7e0;
+        }
+
+        .add-journal-form button {
+            width: 100%;
+        }
+
+        .add-journal-form input,
+        .add-journal-form select {
+            width: 100%;
+            background-color: #1f2932;
+            border: 1px solid #2effab;
+            color: #ced7e0;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container">
+        <div class="journal-container">
+            <div class="journal-log">
+                <h2 class="text-center my-4">Trade Journal</h2>
+                <div class="mb-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-success btn-sm" id="customizeJournalBtn">Customize Journal</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="newJournalBtn">Add New Week</button>
+                </div>
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Week Ending</th>
+                            <th>Edit</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="journalTableBody">
+                        <!-- Dynamic rows will be added here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Week Selection Modal -->
+    <div id="weekSelectionModal" class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Week Ending</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="weekSelectionForm">
+                        <div class="form-group">
+                            <label for="weekEndingSelect">Week Ending</label>
+                            <select id="weekEndingSelect" name="weekEndingSelect" class="form-control"></select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-custom">Next</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Journal Modal -->
+    <div id="journalModal" class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Journal for Week Ending <span id="weekEnding"></span></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="journalForm">
+                        <!-- Dynamic form fields will be added here -->
+                        <button type="submit" class="btn btn-success btn-custom">Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customize Journal Modal -->
+    <div id="customizeJournalModal" class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Customize Journal</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="customizeForm">
+                        <div id="customFields">
+                            <!-- Custom fields will be dynamically added here -->
+                        </div>
+                        <button type="button" id="addFieldBtn" class="btn btn-primary btn-custom">Add Field</button>
+                        <button type="submit" class="btn btn-success btn-custom">Save Customization</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const journalTableBody = document.getElementById('journalTableBody');
+            const weekSelectionModal = document.getElementById('weekSelectionModal');
+            const journalModal = document.getElementById('journalModal');
+            const customizeJournalModal = document.getElementById('customizeJournalModal');
+            const newJournalBtn = document.getElementById('newJournalBtn');
+            const customizeJournalBtn = document.getElementById('customizeJournalBtn');
+            const closeBtns = document.getElementsByClassName('close');
+            const weekSelectionForm = document.getElementById('weekSelectionForm');
+            const journalForm = document.getElementById('journalForm');
+            const customizeForm = document.getElementById('customizeForm');
+            const customFieldsDiv = document.getElementById('customFields');
+            const addFieldBtn = document.getElementById('addFieldBtn');
+            const weekEndingSpan = document.getElementById('weekEnding');
+            const weekEndingSelect = document.getElementById('weekEndingSelect');
+    
+            let journals = [];
+            let customFields = [];
+            let currentJournalId = null; // Keep track of the current journal being edited
+    
+            const fetchJournals = async () => {
+                try {
+                    const response = await fetch('/get_journals');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    journals = data;
+                    console.log('Fetched journals:', journals);  // Debug statement
+                    renderTable();
+                } catch (error) {
+                    console.error('Error fetching journals:', error);
+                }
+            };
+    
+            const fetchCustomFields = async () => {
+                try {
+                    const response = await fetch('/custom_fields');
+                    const data = await response.json();
+                    console.log("Fetched custom fields data:", data);  // Debug statement
+                    if (Array.isArray(data)) {
+                        customFields = data;
+                        renderCustomFields();
+                    } else {
+                        console.error("Expected an array but received:", data);
+                    }
+                } catch (error) {
+                    console.error("Error fetching custom fields:", error);
+                }
+            };
+    
+            const renderTable = () => {
+                journalTableBody.innerHTML = '';
+                journals.forEach((journal) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${journal.week_ending}</td>
+                        <td><button class="btn btn-primary btn-sm edit-btn" data-id="${journal.id}">Edit</button></td>
+                        <td><button class="btn btn-danger btn-sm delete-btn" data-id="${journal.id}">Delete</button></td>
+                    `;
+                    journalTableBody.appendChild(row);
+                });
+    
+                document.querySelectorAll('.edit-btn').forEach(button => {
+                    button.addEventListener('click', () => editJournal(button.getAttribute('data-id')));
+                });
+    
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', () => deleteJournal(button.getAttribute('data-id')));
+                });
+            };
+    
+            const renderCustomFields = () => {
+                customFieldsDiv.innerHTML = '';
+                customFields.forEach((field, index) => {
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.classList.add('form-group');
+                    fieldDiv.innerHTML = `
+                        <label for="field${index + 1}">Field ${index + 1}</label>
+                        <input type="text" class="form-control" id="field${index + 1}" name="field${index + 1}" value="${field}">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeField(this)">Remove</button>
+                    `;
+                    customFieldsDiv.appendChild(fieldDiv);
+                });
+            };
+    
+            const editJournal = async (id) => {
+                try {
+                    const response = await fetch(`/get_journal/${id}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    const journal = await response.json();
+                    console.log('Fetched journal:', journal);  // Add logging
+                    currentJournalId = journal.id;  // Set the current journal ID
+                    weekEndingSpan.textContent = journal.week_ending;
+                    const fields = journal.data;  // Data is now valid JSON
+                    journalForm.innerHTML = customFields.map(field => `
+                        <div class="form-group">
+                            <label for="${field}">${field}</label>
+                            <textarea class="form-control" id="${field}" name="${field}" rows="4">${fields[field] || ''}</textarea>
+                        </div>
+                    `).join('') + '<button type="submit" class="btn btn-success btn-custom">Save</button>';
+                    $('#journalModal').modal('show');
+                } catch (error) {
+                    console.error("Failed to fetch the journal entry:", error);
+                }
+            };
+    
+            const deleteJournal = async (id) => {
+                if (confirm('Are you sure you want to delete this journal entry?')) {
+                    try {
+                        const response = await fetch(`/delete_journal/${id}`, { method: 'DELETE' });
+                        if (response.ok) {
+                            fetchJournals();
+                        } else {
+                            console.error("Failed to delete the journal entry");
+                        }
+                    } catch (error) {
+                        console.error("Error deleting journal entry:", error);
+                    }
+                }
+            };
+    
+            const saveCustomization = async () => {
+                const fields = Array.from(customizeForm.querySelectorAll('input[type="text"]')).map(input => input.value);
+                console.log("Saving fields:", fields);  // Debug statement
+                const response = await fetch('/custom_fields', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fields })
+                });
+                if (response.ok) {
+                    fetchCustomFields();
+                    $('#customizeJournalModal').modal('hide');
+                } else {
+                    const error = await response.json();
+                    console.error("Error saving fields:", error);
+                }
+            };
+    
+            newJournalBtn.onclick = () => {
+                currentJournalId = null;  // Reset the current journal ID when creating a new entry
+                weekEndingSelect.innerHTML = '';
+                $('#weekSelectionModal').modal('show');
+                populateWeekEndingOptions();
+            };
+    
+            customizeJournalBtn.onclick = () => {
+                renderCustomFields();
+                $('#customizeJournalModal').modal('show');
+            };
+    
+            for (let i = 0; i < closeBtns.length; i++) {
+                closeBtns[i].onclick = () => {
+                    $(closeBtns[i].closest('.modal')).modal('hide');
+                };
+            }
+    
+            window.onclick = (event) => {
+                if (event.target == weekSelectionModal) {
+                    $('#weekSelectionModal').modal('hide');
+                } else if (event.target == journalModal) {
+                    $('#journalModal').modal('hide');
+                } else if (event.target == customizeJournalModal) {
+                    $('#customizeJournalModal').modal('hide');
+                }
+            };
+    
+            weekSelectionForm.onsubmit = (event) => {
+                event.preventDefault();
+                const selectedDate = weekEndingSelect.value;
+                weekEndingSpan.textContent = selectedDate;
+                journalForm.innerHTML = customFields.map(field => `
+                    <div class="form-group">
+                        <label for="${field}">${field}</label>
+                        <textarea class="form-control" id="${field}" name="${field}" rows="4"></textarea>
+                    </div>
+                `).join('') + '<button type="submit" class="btn btn-success btn-custom">Save</button>';
+                $('#journalModal').modal('show');
+                $('#weekSelectionModal').modal('hide');
+            };
+    
+            journalForm.onsubmit = async (event) => {
+                event.preventDefault();
+                const formData = new FormData(journalForm);
+                const fields = Object.fromEntries(formData.entries());
+                const newJournal = {
+                    id: currentJournalId,  // Include the journal ID if it's an existing entry
+                    weekEnding: weekEndingSpan.textContent,
+                    fields,
+                };
+                console.log("Saving journal:", newJournal);  // Debug statement
+                const response = await fetch('/save_journal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newJournal)
+                });
+                if (response.ok) {
+                    fetchJournals();
+                    $('#journalModal').modal('hide');
+                }
+            };
+    
+            customizeForm.onsubmit = (event) => {
+                event.preventDefault();
+                saveCustomization();
+            };
+    
+            addFieldBtn.onclick = () => {
+                const fieldCount = customFieldsDiv.children.length + 1;
+                const newField = document.createElement('div');
+                newField.classList.add('form-group');
+                newField.innerHTML = `
+                    <label for="field${fieldCount}">Field ${fieldCount}</label>
+                    <input type="text" class="form-control" id="field${fieldCount}" name="field${fieldCount}">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeField(this)">Remove</button>
+                `;
+                customFieldsDiv.appendChild(newField);
+            };
+    
+            window.removeField = (button) => {
+                button.closest('div').remove();
+            };
+    
+            const getRecentSaturday = () => {
+                const today = new Date();
+                const dayOfWeek = today.getDay();
+                const daysSinceSaturday = dayOfWeek === 6 ? 0 : 6 - dayOfWeek;
+                const recentSaturday = new Date(today.setDate(today.getDate() - daysSinceSaturday));
+                return recentSaturday;
+            };
+    
+            const getNextSaturday = (date) => {
+                const nextSaturday = new Date(date);
+                nextSaturday.setDate(nextSaturday.getDate() + 7);
+                return nextSaturday;
+            };
+    
+            const getPreviousSaturdays = (date, count) => {
+                const saturdays = [];
+                for (let i = 1; i <= count; i++) {
+                    const previousSaturday = new Date(date);
+                    previousSaturday.setDate(previousSaturday.getDate() - (7 * i));
+                    saturdays.push(previousSaturday);
+                }
+                return saturdays;
+            };
+    
+            const populateWeekEndingOptions = () => {
+                const recentSaturday = getRecentSaturday();
+                const nextSaturday = getNextSaturday(recentSaturday);
+                const previousSaturdays = getPreviousSaturdays(recentSaturday, 8);
+    
+                // Combine all dates and sort them
+                const allSaturdays = previousSaturdays.concat(recentSaturday, nextSaturday)
+                    .map(date => date.toISOString().split('T')[0])
+                    .sort();
+    
+                weekEndingSelect.innerHTML = allSaturdays.map(date => `
+                    <option value="${date}">${date}</option>
+                `).join('');
+    
+                weekEndingSelect.value = recentSaturday.toISOString().split('T')[0];
+            };
+    
+            fetchJournals();
+            fetchCustomFields();
+        });
+    </script>
+    
+</body>
+</html>
