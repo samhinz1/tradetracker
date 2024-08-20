@@ -1,7 +1,6 @@
 from datetime import datetime
-from app import db
 from flask_login import UserMixin
-
+from db import db  # Import db from the new db.py module
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
