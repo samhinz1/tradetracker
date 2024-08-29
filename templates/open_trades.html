@@ -272,6 +272,10 @@
                             <label for="commissions">Commissions:</label>
                             <input type="number" step="0.01" id="commissions" name="commissions" class="form-control">
                         </div>
+                        <div class="form-group">
+                            <label for="partial-size">Size to Close:</label>
+                            <input type="number" step="0.01" id="partial-size" name="partial-size" class="form-control">
+                        </div>
                         <input type="hidden" name="trade_id" id="close-trade-id">
                         <input type="hidden" name="Opened" id="close-trade-opened">
                         <input type="hidden" name="Market" id="close-trade-market">
@@ -510,6 +514,10 @@
             document.getElementById('close-trade-stop-loss').value = stopLoss;
             document.getElementById('close-trade-setup-type').value = setupType;
             document.getElementById('close-trade-note').value = note;
+            
+            // Set the partial size field to the full size by default
+            document.getElementById('partial-size').value = size;
+            document.getElementById('partial-size').max = size; // Ensure the user cannot close more than the available size
         }
     </script>
 </body>

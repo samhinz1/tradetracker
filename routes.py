@@ -37,6 +37,20 @@ def parse_date(date_str):
     app.logger.error(f"Date format for {date_str} is not supported")
     return None  # Return None if parsing fails
 
+def parse_and_format_datetime(date_str, time_str):
+    # If time is empty, set it to '00:00:00'
+    if not time_str:
+        time_str = '00:00:00'
+    combined_str = f"{date_str} {time_str}"
+    date_formats = ["%Y-%m-%d %H:%M:%S", "%d-%m-%Y %H:%M:%S", "%d-%m-%Y", "%Y-%m-%d"]
+    for fmt in date_formats:
+        try:
+            parsed_date = datetime.strptime(combined_str, fmt)
+            return parsed_date.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+    return None
+
 def get_latest_stock_price(symbol, api_key):
     ts = TimeSeries(key=api_key, output_format='pandas')
     data, meta_data = ts.get_quote_endpoint(symbol)
@@ -797,29 +811,14 @@ def close_trade():
             closed_date = request.form.get('closed-date', '')
             closed_time = request.form.get('closed-time', '')
             trade_commissions = float(request.form.get('commissions', 0.0))
+            partial_size = float(request.form.get('partial-size', 0.0))  # Get partial size
             
             # Ensure commissions are negative
             if trade_commissions > 0:
                 trade_commissions = -trade_commissions
 
-
             # Combine date and time
-            def parse_and_format_datetime(date_str, time_str):
-                # If time is empty, set it to '00:00:00'
-                if not time_str:
-                    time_str = '00:00:00'
-                combined_str = f"{date_str} {time_str}"
-                date_formats = ["%Y-%m-%d %H:%M:%S", "%d-%m-%Y %H:%M:%S", "%d-%m-%Y", "%Y-%m-%d"]
-                for fmt in date_formats:
-                    try:
-                        parsed_date = datetime.strptime(combined_str, fmt)
-                        return parsed_date.strftime("%Y-%m-%d %H:%M:%S")
-                    except ValueError:
-                        continue
-                return None
-
             closed_date_str = parse_and_format_datetime(closed_date, closed_time)
-
             app.logger.debug(f"Trade ID: {trade_id}, Closing Price: {closing_price}, Closed Date: {closed_date_str}")
 
             # Database connection
@@ -837,11 +836,17 @@ def close_trade():
             opening_price = float(trade['Opening'])
             trade_size = float(trade['Size'])
 
-            # Calculate P/L
-            pl = (closing_price - opening_price) * trade_size
+            # Ensure the partial size is valid
+            if partial_size > trade_size or partial_size <= 0:
+                app.logger.error("Invalid partial size provided.")
+                raise ValueError("Invalid partial size provided.")
+
+            # Calculate P/L for the partial trade
+            pl = (closing_price - opening_price) * partial_size
             total = pl - abs(trade_commissions)
             pl_percent = ((closing_price - opening_price) / opening_price) * 100
 
+            # Create a new entry for the partially closed trade
             new_closed_trade = {
                 'id': str(uuid.uuid4()),
                 'Closing_Ref': f"{trade['Market']}-{trade['Opened']}",
@@ -851,7 +856,7 @@ def close_trade():
                 'Market': trade['Market'],
                 'Period': trade['Period'],
                 'Direction': trade['Direction'],
-                'Size': trade_size,
+                'Size': partial_size,  # Use the partial size here
                 'Opening': opening_price,
                 'Closing': closing_price,
                 'Trade_Ccy': trade['Trade_Ccy'],
@@ -872,13 +877,19 @@ def close_trade():
 
             app.logger.debug(f"New closed trade data: {new_closed_trade}")
 
-            # Insert the closed trade into the trades table
+            # Insert the partially closed trade into the trades table
             new_closed_trade_df = pd.DataFrame([new_closed_trade])
             new_closed_trade_df.to_sql('trades', conn, if_exists='append', index=False)
 
-            # Remove the closed trade from the open trades table
-            open_trades_df = open_trades_df.drop(open_trades_df.index[0]).reset_index(drop=True)
-            open_trades_df.to_sql('open_trades', conn, if_exists='replace', index=False)
+            # Adjust the size of the open trade
+            remaining_size = trade_size - partial_size
+            if remaining_size > 0:
+                open_trades_df.at[0, 'Size'] = remaining_size
+                open_trades_df.to_sql('open_trades', conn, if_exists='replace', index=False)
+            else:
+                # If the trade is fully closed, remove it from the open trades table
+                open_trades_df = open_trades_df.drop(open_trades_df.index[0]).reset_index(drop=True)
+                open_trades_df.to_sql('open_trades', conn, if_exists='replace', index=False)
 
             conn.close()
 
@@ -888,6 +899,8 @@ def close_trade():
             app.logger.error(f"Error during closing trade: {e}")
             flash('An error occurred while closing the trade. Please try again.', 'danger')
             return redirect(url_for('open_trades'))
+
+
 
 
 

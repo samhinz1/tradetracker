@@ -325,23 +325,41 @@
     }
 
     document.addEventListener('input', function() {
-        var size = parseFloat(document.getElementById('size').value) || 0;
-        var opening = parseFloat(document.getElementById('opening').value) || 0;
-        var closing = parseFloat(document.getElementById('closing').value) || 0;
-        var commissions = parseFloat(document.getElementById('commissions').value) || 0;
+        var size = document.getElementById('size').value;
+        var opening = document.getElementById('opening').value;
+        var closing = document.getElementById('closing').value;
+        var commissions = document.getElementById('commissions').value;
+
+        // Keep placeholders if the fields are empty
+        size = size === "" ? "" : parseFloat(size) || 0;
+        opening = opening === "" ? "" : parseFloat(opening) || 0;
+        closing = closing === "" ? "" : parseFloat(closing) || 0;
+        commissions = commissions === "" ? "" : parseFloat(commissions) || 0;
 
         // Ensure commissions is always negative
-        commissions = commissions > 0 ? -commissions : commissions;
-        document.getElementById('commissions').value = commissions;
+        if (commissions > 0) {
+            commissions = -commissions;
+        }
+        document.getElementById('commissions').value = commissions === 0 ? "" : commissions;
 
-        var pl = ((closing - opening) * size).toFixed(1);
-        document.getElementById('pl').value = pl;
+        if (size !== "" && opening !== "" && closing !== "") {
+            var pl = ((closing - opening) * size).toFixed(1);
+            document.getElementById('pl').value = pl;
 
-        var total = (parseFloat(pl) + parseFloat(commissions)).toFixed(1);
-        document.getElementById('total').value = total;
+            var total = (parseFloat(pl) + parseFloat(commissions)).toFixed(1);
+            document.getElementById('total').value = total;
 
-        var pl_percent = (((closing - opening) / opening) * 100).toFixed(2);
-        document.getElementById('pl_percent').value = pl_percent;
+            var pl_percent = (((closing - opening) / opening) * 100).toFixed(2);
+            document.getElementById('pl_percent').value = pl_percent;
+        } else {
+            document.getElementById('pl').value = "";
+            document.getElementById('total').value = "";
+            document.getElementById('pl_percent').value = "";
+        }
+    });
+
+    document.getElementById('commissions').addEventListener('focus', function() {
+        this.placeholder = 'Commissions';
     });
 
     function formatDates() {
